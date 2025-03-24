@@ -1,0 +1,131 @@
+<canvas width="1280" height="720" style="width:1280;height:720" id="test"></canvas>
+<script>
+    function normalize(p) {
+        let len = Math.sqrt(p[0]*p[0]+p[1]*p[1]+p[2]*p[2]);
+        return [p[0]/len,p[1]/len,p[2]/len];
+    }
+
+    function cross(a, b){
+        return [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]];
+    }
+
+    function groundY(p) {
+        return Math.sin(p[0]*0.001) * 500. + Math.cos (p[2]*0.001) * 500. - 1000.;
+    }
+
+    function calcNormal(p) {
+        return normalize(
+            [
+                groundY([p[0]-0.01, p[1], p[2]]) - groundY([p[0]+0.01, p[1], p[2]]),
+                0.02,
+                groundY([p[0], p[1], p[2]-0.01]) - groundY([p[0], p[1], p[2]+0.01])
+            ]
+        )
+    }
+
+    function rotateRD(ro, ta, rd){
+        var cw = normalize([ta[0]-ro[0], ta[1]-ro[1], ta[2]-ro[2]]);  
+        var cp = [0, 1, 0];  
+        var cu = normalize(cross(cw,cp));  
+        var cv = normalize(cross(cu,cw));  
+        
+        return [
+            cu[0]*rd[0]+cv[0]*rd[1]+cw[0]*rd[2], 
+            cu[1]*rd[0]+cv[1]*rd[1]+cw[1]*rd[2], 
+            cu[2]*rd[0]+cv[2]*rd[1]+cw[2]*rd[2]
+        ];
+
+    }
+
+    function raymarch(ro, rd) {
+        for (var f = 0; f<10000;){
+            var pos = [
+                ro[0] + rd[0]*f,
+                ro[1] + rd[1]*f,
+                ro[2] + rd[2]*f,
+            ];
+            if (pos[1] <= -800.) {
+                return {
+                    type: 0,
+                    pos: pos,
+                    far: f
+                };
+            }
+
+            var y = groundY(pos);
+            if (pos[1] <= y) {
+                return {
+                    type: 1,
+                    pos: pos,
+                    far: f
+                };
+            }
+
+            f += Math.max(1, 0.1*f);
+        }
+        return null;
+    }
+
+    var light = normalize([1,1,1]);
+
+    function f(x, y) {
+        var ray_origin = [0, 0, -Math.sqrt(3)];
+        var target = [0, -1, 100];
+
+        var l2pixel = height / 2;
+        var xy = [
+            (x - width/2) / l2pixel,
+            (y - height/2) / l2pixel
+        ];
+        var ray_direction = normalize([
+            xy[0],
+            xy[1],
+            Math.sqrt(3)
+        ]);
+        ray_direction = rotateRD(ray_origin, target, ray_direction);
+
+        var hit = raymarch(ray_origin, ray_direction);
+        var col;
+        if (hit != null) {
+            var norm;
+            if (hit.type == 1) {
+                norm = calcNormal(hit.pos);
+                col = [0.7, 0.7, 0.5];
+            }
+            else {
+                norm = [0, 1, 0];
+                col = [0, 0.5, 0.7];
+            }
+            var lt = Math.max(0, norm[0] * light[0] + norm[1] * light[1] + norm[2] * light[2]);
+            col = [
+                col[0] * lt,
+                col[1] * lt,
+                col[2] * lt,
+            ]
+                
+        }
+        else {
+            col = [0, 0, 1];
+        }
+        return col;
+    }
+
+    const canvas = document.getElementById('test');
+    const ctx = canvas.getContext('2d');
+    const width = canvas.width;
+    const height = canvas.height;
+    const imageData = ctx.createImageData(width, height);
+
+
+    let i = 0;
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+            var c = f(x, height-y);
+            imageData.data[i++] = c[0]*255;
+            imageData.data[i++] = c[1]*255;
+            imageData.data[i++] = c[2]*255;
+            imageData.data[i++] = 255;
+        }
+    }
+    ctx.putImageData(imageData, 0, 0);
+</script>
