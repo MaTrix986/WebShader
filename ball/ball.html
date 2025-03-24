@@ -1,0 +1,53 @@
+<canvas width="1280" height="720" style="width:1280;height:720" id="test"></canvas>
+<script>
+    function normalize(p) {
+        let len = Math.sqrt(p[0]*p[0]+p[1]*p[1]+p[2]*p[2]);
+        return [p[0]/len,p[1]/len,p[2]/len];
+    }
+
+    var light = normalize([1,1,1]);
+    function drawball(px, py) {
+        var pz = Math.sqrt(1-px*px-py*py);
+        var tt = px * light[0] + py * light[1] + pz * light[2]
+        tt = Math.max(0, tt);
+
+        tt = Math.min(1, tt+Math.pow(tt,100));
+
+        return [tt,tt,tt];
+    }
+
+    function f(x, y) {
+        var px = (x*2-width)/height;
+        var py = (y*2-height)/height;
+        var col;
+        var r = 0.5;
+        if (px*px+py*py>r*r) {
+            col = [0,0,0];
+        } else {
+            px /= r;
+            py /= r;            
+            
+            col = drawball(px,py);
+        }
+        return col;
+    }
+
+    const canvas = document.getElementById('test');
+    const ctx = canvas.getContext('2d');
+    const width = canvas.width;
+    const height = canvas.height;
+    const imageData = ctx.createImageData(width, height);
+
+
+    let i = 0;
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+            var c = f(x, height-y);
+            imageData.data[i++] = c[0]*255;
+            imageData.data[i++] = c[1]*255;
+            imageData.data[i++] = c[2]*255;
+            imageData.data[i++] = 255;
+        }
+    }
+    ctx.putImageData(imageData, 0, 0);
+</script>
